@@ -54,20 +54,23 @@ export default function NoticePage() {
   async function handleSubmit() {
     const title = draftTitle.trim();
     if (!title) return;
-    const body = draftBody.trim() || null;
+    const body = draftBody.trim();
 
-    if (editingId) {
-      const { error } = await supabase.from("notices").update({ title, body }).eq("id", editingId);
-      if (!error) {
-        resetDraft();
-        loadNotices();
-      }
-    } else {
-      const { error } = await supabase.from("notices").insert({ title, body });
-      if (!error) {
-        resetDraft();
-        loadNotices();
-      }
+    const res = editingId
+      ? await fetch(`/api/admin/notice/${editingId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, body }),
+        })
+      : await fetch("/api/admin/notice", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, body }),
+        });
+
+    if (res.ok) {
+      resetDraft();
+      loadNotices();
     }
   }
 
@@ -78,8 +81,8 @@ export default function NoticePage() {
   }
 
   async function handleDelete(id: string) {
-    const { error } = await supabase.from("notices").delete().eq("id", id);
-    if (!error) {
+    const res = await fetch(`/api/admin/notice/${id}`, { method: "DELETE" });
+    if (res.ok) {
       if (editingId === id) resetDraft();
       loadNotices();
     }

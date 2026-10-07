@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 import AdminNav from "@/components/AdminNav";
 
 type ClassRow = {
@@ -34,8 +33,6 @@ export default function MonthPage() {
   const todayStr = toDateString(today);
   const monthStart = new Date(year, month, 1);
   const monthEnd = new Date(year, month + 1, 0);
-  const monthStartStr = toDateString(monthStart);
-  const monthEndStr = toDateString(monthEnd);
 
   useEffect(() => {
     setSelectedDate(null);
@@ -45,35 +42,16 @@ export default function MonthPage() {
   async function load() {
     setLoading(true);
     setLoadError(false);
-    const { data, error } = await supabase
-      .from("classes")
-      .select("date, time, class_name, capacity, bookings ( status, members ( name ) )")
-      .gte("date", monthStartStr)
-      .lte("date", monthEndStr)
-      .order("date")
-      .order("time");
+    const res = await fetch(`/api/admin/month?year=${year}&month=${month + 1}`);
 
-    if (error) {
+    if (!res.ok) {
       setLoadError(true);
       setLoading(false);
       return;
     }
 
-    const grouped: Record<string, ClassRow[]> = {};
-    for (const c of data ?? []) {
-      const activeBookings = (c.bookings ?? []).filter((b: any) => b.status !== "취소");
-      const row: ClassRow = {
-        date: c.date,
-        time: c.time?.slice(0, 5),
-        class_name: c.class_name,
-        capacity: c.capacity,
-        booked: activeBookings.length,
-        names: activeBookings.map((b: any) => b.members?.name).filter(Boolean),
-      };
-      grouped[c.date] = grouped[c.date] ?? [];
-      grouped[c.date].push(row);
-    }
-    setByDate(grouped);
+    const { byDate: grouped } = (await res.json()) as { byDate: Record<string, ClassRow[]> };
+    setByDate(grouped ?? {});
     setLoading(false);
   }
 

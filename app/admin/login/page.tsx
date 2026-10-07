@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-const ADMIN_EMAIL = "owner@pt-booking.kr";
-const ADMIN_PASSWORD = "pilates2026";
 const LAST_LOGIN_KEY = "pt_admin_last_login";
 
 export default function LoginPage() {
@@ -19,18 +17,21 @@ export default function LoginPage() {
     setLastLogin(localStorage.getItem(LAST_LOGIN_KEY));
   }, []);
 
-  function handleSubmit() {
+  async function handleSubmit() {
     setSubmitting(true);
     setFailed(false);
-    setTimeout(() => {
-      if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-        localStorage.setItem(LAST_LOGIN_KEY, email);
-        router.push("/admin/today");
-      } else {
-        setFailed(true);
-        setSubmitting(false);
-      }
-    }, 200);
+    const res = await fetch("/api/admin/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    if (res.ok) {
+      localStorage.setItem(LAST_LOGIN_KEY, email);
+      router.push("/admin/today");
+    } else {
+      setFailed(true);
+      setSubmitting(false);
+    }
   }
 
   return (

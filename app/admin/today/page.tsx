@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 import AdminNav from "@/components/AdminNav";
 
 type TodayRow = {
@@ -18,14 +17,6 @@ type HistoryRow = {
   className: string;
   status: string;
 };
-
-function todayString() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
 
 function formatHistoryDate(iso: string) {
   const d = new Date(iso + "T00:00:00");
@@ -59,32 +50,15 @@ export default function TodayPage() {
   async function loadToday() {
     setLoading(true);
     setLoadError(false);
-    const { data, error } = await supabase
-      .from("classes")
-      .select("time, class_name, bookings ( status, members ( id, name, phone ) )")
-      .eq("date", todayString())
-      .order("time");
+    const res = await fetch("/api/admin/today");
 
-    if (error) {
-      console.error("오늘 수업 불러오기 실패:", error);
+    if (!res.ok) {
       setLoadError(true);
       setLoading(false);
       return;
     }
 
-    const flat: TodayRow[] = [];
-    for (const cls of data ?? []) {
-      for (const b of (cls as any).bookings ?? []) {
-        if (b.status === "취소" || !b.members) continue;
-        flat.push({
-          memberId: b.members.id,
-          name: b.members.name,
-          phone: b.members.phone,
-          className: (cls as any).class_name,
-          time: (cls as any).time?.slice(0, 5),
-        });
-      }
-    }
+    const { rows: flat } = (await res.json()) as { rows: TodayRow[] };
     flat.sort((a, b) => a.name.localeCompare(b.name, "ko"));
     setRows(flat);
     setLoading(false);
@@ -94,21 +68,9 @@ export default function TodayPage() {
     setSelectedMemberId(memberId);
     setSelectedName(name);
     setSelectedPhone(phone);
-    const { data } = await supabase
-      .from("bookings")
-      .select("status, classes ( date, time, class_name )")
-      .eq("member_id", memberId);
-
-    const list: HistoryRow[] = (data ?? [])
-      .filter((b: any) => b.classes)
-      .map((b: any) => ({
-        date: b.classes.date,
-        time: b.classes.time?.slice(0, 5),
-        className: b.classes.class_name,
-        status: b.status,
-      }))
-      .sort((a, b) => b.date.localeCompare(a.date));
-    setHistory(list);
+    const res = await fetch(`/api/admin/member/${memberId}`);
+    const { history: list } = (await res.json()) as { history: HistoryRow[] };
+    setHistory(list ?? []);
   }
 
   const filtered = rows.filter((b) => b.name.includes(query.trim()));

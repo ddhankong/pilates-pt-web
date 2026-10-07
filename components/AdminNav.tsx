@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const items = [
   { label: "오늘 수업", href: "/admin/today" },
@@ -11,6 +11,12 @@ const items = [
 
 export default function AdminNav() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleLogout() {
+    await fetch("/api/admin/logout", { method: "POST" });
+    router.push("/admin/login");
+  }
 
   return (
     <aside className="w-[160px] shrink-0 border-r border-[#E4E8EC] bg-white p-4">
@@ -36,12 +42,12 @@ export default function AdminNav() {
           );
         })}
       </nav>
-      <Link
-        href="/admin/login"
-        className="mt-4 block border-t border-[#E4E8EC] pt-3 text-sm text-[#5B6169]"
+      <button
+        onClick={handleLogout}
+        className="mt-4 block w-full border-t border-[#E4E8EC] pt-3 text-left text-sm text-[#5B6169]"
       >
         로그아웃
-      </Link>
+      </button>
     </aside>
   );
 }
